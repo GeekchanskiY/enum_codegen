@@ -1,6 +1,6 @@
 package test_package
 
-//go:generate main enum
+//go:generate main
 type Enum string
 
 //go:generate main
