@@ -1,9 +1,19 @@
 package test_package
 
 //go:generate main
-type Enum string
+type Enum int
 
-//go:generate main
+const (
+	EnumValue Enum = iota
+	EnumValue2
+	EnumValue3
+	EnumValue4
+)
+
+const (
+	EnumValue5, EnumValue6 Enum = 5, 6
+)
+
 type Test struct {
 	Value string
 }
