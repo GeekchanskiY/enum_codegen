@@ -3,7 +3,7 @@ package test_package
 
 var EnumValues = map[Enum]string{
 
-	EnumValue: "EnumValue",
+	EnumValue1: "EnumValue1",
 
 	EnumValue2: "EnumValue2",
 

@@ -27,11 +27,11 @@ var {{ .EnumName }}Values = map[{{ .EnumName }}]string{
 
 func main() {
 	// Default generate call env's
-	//fmt.Println(os.Getenv("GOARCH"))
-	//fmt.Println(os.Getenv("GOFILE"))
-	//fmt.Println(os.Getenv("GOOS"))
-	//fmt.Println(os.Getenv("GOLINE"))
-	//fmt.Println(os.Getenv("GOPACKAGE"))
+	// fmt.Println(os.Getenv("GOARCH"))
+	// fmt.Println(os.Getenv("GOFILE"))
+	// fmt.Println(os.Getenv("GOOS"))
+	// fmt.Println(os.Getenv("GOLINE"))
+	// fmt.Println(os.Getenv("GOPACKAGE"))
 
 	targetLine, err := strconv.Atoi(os.Getenv("GOLINE"))
 	if err != nil {
@@ -146,11 +146,11 @@ func main() {
 						})
 					}
 
-					//fmt.Println("declaration", declaration)
-					//fmt.Println(declaration.Kind)
-					//fmt.Println(declaration.Name)
-					//fmt.Println(declaration.Type)
-					//fmt.Println(declaration.Data)
+					// fmt.Println("declaration", declaration)
+					// fmt.Println(declaration.Kind)
+					// fmt.Println(declaration.Name)
+					// fmt.Println(declaration.Type)
+					// fmt.Println(declaration.Data)
 				}
 			}
 		}
@@ -167,7 +167,7 @@ func main() {
 		panic(err)
 	}
 
-	newFileName := strings.Split(os.Getenv("GOFILE"), ".")[0] + "_gen.go"
+	newFileName := strings.Split(os.Getenv("GOFILE"), ".")[0] + "_" + enumName + "__gen.go"
 
 	dataPath := filepath.Join(path, newFileName)
 	fmt.Printf("generated code to %s\n", dataPath)
@@ -176,7 +176,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			panic(err)
+		}
+	}()
 
 	err = tmpl.Execute(file, map[string]any{
 		"PackageName": os.Getenv("GOPACKAGE"),

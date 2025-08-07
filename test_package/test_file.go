@@ -1,13 +1,13 @@
 package test_package
 
-//go:generate main
+//go:generate enum_codegen
 type Enum int
 
 const (
-	EnumValue Enum = iota
-	EnumValue2
-	EnumValue3
-	EnumValue4
+	EnumValue1 Enum = iota // Translate="Значение Enum 1"
+	EnumValue2             // Translate="Значение Enum 2"
+	EnumValue3             // Translate="Значение Enum 3"
+	EnumValue4             // Translate="Значение Enum 4"
 )
 
 const (
