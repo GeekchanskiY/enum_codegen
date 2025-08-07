@@ -18,6 +18,14 @@ import (
 const Template = `// Code generated via enum_codegen DO NOT EDIT.
 package {{ .PackageName }}
 
+import (
+	"database/sql"
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
+	"fmt"
+)
+
 var (
 	_ sql.Scanner   = (*{{ .EnumName }})(nil)
 	_ driver.Valuer = (*{{ .EnumName }})(nil)
@@ -76,7 +84,7 @@ func (t *{{ .EnumName }}) UnmarshalJSON(data []byte) error {
 		err error
 	)
 
-	if err := json.Unmarshal(data, &s); err != nil {
+	if err = json.Unmarshal(data, &s); err != nil {
 		return err
 	}
 

@@ -42,6 +42,7 @@ var Translations = map[Enum]string{
 
 func (t *Enum) Scan(src any) error {
 	value, ok := src.(string)
+
 	if !ok {
 		return errors.New("src is not string")
 	}
@@ -67,13 +68,18 @@ func (t Enum) MarshalJSON() ([]byte, error) {
 }
 
 func (t *Enum) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
+	var (
+		s   string
+		err error
+	)
+
+	if err = json.Unmarshal(data, &s); err != nil {
 		return err
 	}
 
 	if v, ok := Types[s]; ok {
 		*t = v
+
 		return nil
 	}
 
