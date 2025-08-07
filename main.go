@@ -67,7 +67,7 @@ func (t *{{ .EnumName }}) Scan(src any) error {
 }
 
 func (t {{ .EnumName }}) Value() (driver.Value, error) {
-	return []byte(Tags[t]), nil
+	return Tags[t], nil
 }
 
 func (t {{ .EnumName }}) String() string {
