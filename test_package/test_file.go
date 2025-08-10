@@ -4,14 +4,14 @@ package test_package
 type Enum int
 
 const (
-	// Undefined Translate="Значение Enum не определено"
+	// Undefined Value="Undefined" Translate="Enum Value is undefined"
 	Undefined Enum = iota
-	// EnumValue1 Translate="Значение Enum 1"
+	// EnumValue1 docs Value="Sample value"
 	EnumValue1
-	// EnumValue2 Translate="Значение Enum 2"
 	EnumValue2
-	// EnumValue3 Translate="Значение Enum 3"
+	// EnumValue3 Some documentation, some explanation, etc. Translate="Enum ultra value"
 	EnumValue3
-	// Translate="Значение Enum 4"
+	// Translate="Enum last value" and some documentation here
 	EnumValue4
+	EnumValue5
 )
