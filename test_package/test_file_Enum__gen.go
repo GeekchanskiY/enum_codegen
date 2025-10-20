@@ -56,7 +56,7 @@ func (t *Enum) Scan(src any) error {
 }
 
 func (t Enum) Value() (driver.Value, error) {
-	return []byte(Tags[t]), nil
+	return Tags[t], nil
 }
 
 func (t Enum) String() string {
