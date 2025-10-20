@@ -17,27 +17,30 @@ var (
 )
 
 var Tags = map[Enum]string{
-	Undefined:  "undefined",
-	EnumValue1: "enum_value_1",
+	Undefined:  "Undefined",
+	EnumValue1: "Sample value",
 	EnumValue2: "enum_value_2",
 	EnumValue3: "enum_value_3",
 	EnumValue4: "enum_value_4",
+	EnumValue5: "enum_value_5",
 }
 
 var Types = map[string]Enum{
-	"undefined":    Undefined,
-	"enum_value_1": EnumValue1,
+	"Undefined":    Undefined,
+	"Sample value": EnumValue1,
 	"enum_value_2": EnumValue2,
 	"enum_value_3": EnumValue3,
 	"enum_value_4": EnumValue4,
+	"enum_value_5": EnumValue5,
 }
 
 var Translations = map[Enum]string{
-	Undefined:  "Значение Enum не определено",
-	EnumValue1: "Значение Enum 1",
-	EnumValue2: "Значение Enum 2",
-	EnumValue3: "Значение Enum 3",
-	EnumValue4: "Значение Enum 4",
+	Undefined:  "Enum Value is undefined",
+	EnumValue1: "enum_value_1",
+	EnumValue2: "enum_value_2",
+	EnumValue3: "Enum ultra value",
+	EnumValue4: "Enum last value",
+	EnumValue5: "enum_value_5",
 }
 
 func (t *Enum) Scan(src any) error {

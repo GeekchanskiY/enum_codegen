@@ -208,19 +208,25 @@ func main() {
 							panic(err)
 						}
 
-						translation := ""
+						comment := ""
 						if ts.Doc != nil && len(ts.Doc.List) > 0 {
-							translation = ts.Doc.List[0].Text
+							comment = ts.Doc.List[0].Text
 						}
 
-						if translation = GetTranslationFromComment(translation); translation == "" {
+						translation := ""
+						if translation = GetTranslationFromComment(comment); translation == "" {
 							translation = CamelToSnake(declaration.Name)
+						}
+
+						stringName := ""
+						if stringName = GetValueFromComment(comment); stringName == "" {
+							stringName = CamelToSnake(declaration.Name)
 						}
 
 						enums = append(enums, EnumData{
 							Name:      declaration.Name,
 							Value:     enumValue,
-							SnakeName: CamelToSnake(declaration.Name),
+							SnakeName: stringName,
 							Translate: translation,
 						})
 					}
@@ -293,6 +299,18 @@ func CamelToSnake(s string) string {
 // GetTranslationFromComment - get enum's translation from comment
 func GetTranslationFromComment(comment string) string {
 	re := regexp.MustCompile(`Translate="([^"]+)"`)
+	match := re.FindStringSubmatch(comment)
+
+	if len(match) > 1 {
+		return match[1]
+	} else {
+		return ""
+	}
+}
+
+// GetValueFromComment - get enum's string value from comment
+func GetValueFromComment(comment string) string {
+	re := regexp.MustCompile(`Value="([^"]+)"`)
 	match := re.FindStringSubmatch(comment)
 
 	if len(match) > 1 {
