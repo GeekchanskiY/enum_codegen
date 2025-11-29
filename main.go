@@ -108,12 +108,14 @@ type EnumData struct {
 func main() {
 	targetLine, err := strconv.Atoi(os.Getenv("GOLINE"))
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to parse GOLINE: %s\n", err)
+		os.Exit(1)
 	}
 
 	path, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to get current directory: %s\n", err)
+		os.Exit(1)
 	}
 
 	fullPath := filepath.Join(path, os.Getenv("GOFILE"))
@@ -122,7 +124,8 @@ func main() {
 
 	data, err := parser.ParseFile(fset, fullPath, nil, parser.ParseComments)
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to parse file: %s\n", err)
+		os.Exit(1)
 	}
 
 	var enumName string
@@ -145,7 +148,8 @@ func main() {
 	})
 
 	if enumName == "" {
-		panic("target not found")
+		_, _ = fmt.Fprintln(os.Stderr, "enum name not found")
+		os.Exit(1)
 	}
 
 	// type parser
@@ -155,7 +159,8 @@ func main() {
 	}
 	_, err = conf.Check(path, fset, []*ast.File{data}, info)
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to check: %s\n", err)
+		os.Exit(1)
 	}
 
 	neededDeclarations := make([]string, 0)
@@ -180,7 +185,8 @@ func main() {
 	}
 
 	if len(neededDeclarations) == 0 {
-		panic("enum declaration not found")
+		_, _ = fmt.Fprintln(os.Stderr, "no enum declarations found")
+		os.Exit(1)
 	}
 
 	enums := make([]EnumData, 0, len(neededDeclarations))
@@ -205,7 +211,8 @@ func main() {
 					if slices.Contains(neededDeclarations, declaration.Name) {
 						enumValue, err := strconv.ParseInt(fmt.Sprint(declaration.Data), 10, 64)
 						if err != nil {
-							panic(err)
+							_, _ = fmt.Fprintf(os.Stderr, "failed to parse enum value: %s\n", err)
+							os.Exit(1)
 						}
 
 						comment := ""
@@ -246,13 +253,15 @@ func main() {
 		}
 	}
 	if !undefinedExists {
-		panic("must specify undefined value for enum")
+		_, _ = fmt.Fprintln(os.Stderr, "no undefined value found for enum")
+		os.Exit(1)
 	}
 
 	// template generation
 	tmpl, err := template.New("enum_code").Parse(Template)
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to parse template: %s\n", err)
+		os.Exit(1)
 	}
 
 	newFileName := strings.Split(os.Getenv("GOFILE"), ".")[0] + "_" + enumName + "__gen.go"
@@ -261,12 +270,14 @@ func main() {
 
 	file, err := os.Create(dataPath)
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to create file: %s\n", err)
+		os.Exit(1)
 	}
 
 	defer func() {
 		if err := file.Close(); err != nil {
-			panic(err)
+			_, _ = fmt.Fprintf(os.Stderr, "failed to close file: %s\n", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -276,13 +287,14 @@ func main() {
 		"EnumName":    enumName,
 	})
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to execute template: %s\n", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("generated code to %s\n", dataPath)
 }
 
-// CamelToSnake converts CamelCase or PascalCase with numbers to snake_case
+// CamelToSnake converts camelCase or PascalCase with numbers to snake_case
 func CamelToSnake(s string) string {
 	re1 := regexp.MustCompile("([a-z0-9])([A-Z])")
 	s = re1.ReplaceAllString(s, "${1}_${2}")
