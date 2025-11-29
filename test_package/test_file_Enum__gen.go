@@ -17,8 +17,8 @@ var (
 )
 
 var Tags = map[Enum]string{
-	Undefined:  "undefined",
-	EnumValue1: "enum_value_1",
+	Undefined:  "Undefined",
+	EnumValue1: "Sample value",
 	EnumValue2: "enum_value_2",
 	EnumValue3: "enum_value_3",
 	EnumValue4: "enum_value_4",
@@ -26,8 +26,8 @@ var Tags = map[Enum]string{
 }
 
 var Types = map[string]Enum{
-	"undefined":    Undefined,
-	"enum_value_1": EnumValue1,
+	"Undefined":    Undefined,
+	"Sample value": EnumValue1,
 	"enum_value_2": EnumValue2,
 	"enum_value_3": EnumValue3,
 	"enum_value_4": EnumValue4,

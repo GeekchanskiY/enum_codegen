@@ -30,7 +30,7 @@ Using comments allows to specify string value and translation value
 1. Install enum_codegen:
 
    ```shell
-   go install github.com/GeekchanskiY/enum_codegen
+   go install github.com/GeekchanskiY/enum_codegen/cmd/enum_codegen
    ```
     
     Before other steps make sure that go/bin is in your $PATH

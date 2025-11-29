@@ -106,6 +106,8 @@ type EnumData struct {
 }
 
 func main() {
+	fmt.Println("Enum codegen by GeekchanskiY")
+
 	targetLine, err := strconv.Atoi(os.Getenv("GOLINE"))
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "failed to parse GOLINE: %s\n", err)
