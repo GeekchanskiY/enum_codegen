@@ -2,113 +2,21 @@ package main
 
 import (
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
-	"go/types"
-	"html/template"
 	"os"
 	"path/filepath"
-	"regexp"
-	"slices"
 	"strconv"
-	"strings"
+
+	"github.com/GeekchanskiY/enum_codegen/pkg/generator"
+	"github.com/GeekchanskiY/enum_codegen/pkg/parser"
 )
-
-const Template = `// Code generated via enum_codegen DO NOT EDIT.
-package {{ .PackageName }}
-
-import (
-	"database/sql"
-	"database/sql/driver"
-	"encoding/json"
-	"errors"
-	"fmt"
-)
-
-var (
-	_ sql.Scanner   = (*{{ .EnumName }})(nil)
-	_ driver.Valuer = (*{{ .EnumName }})(nil)
-	_ fmt.Stringer  = (*{{ .EnumName }})(nil)
-	_ json.Marshaler = (*{{ .EnumName }})(nil)
-)
-
-var Tags = map[{{ .EnumName }}]string{
-	{{- range .Enums }} 
-		{{ .Name }}: "{{ .SnakeName }}",
-	{{- end }}
-}
-
-var Types = map[string]{{ .EnumName }}{
-	{{- range .Enums }} 
-		"{{ .SnakeName }}": {{ .Name }},
-	{{- end }}
-}
-
-var Translations = map[{{ .EnumName }}]string{
-	{{- range .Enums }} 
-		{{ .Name }}: "{{ .Translate }}",
-	{{- end }}
-}
-
-func (t *{{ .EnumName }}) Scan(src any) error {
-	value, ok := src.(string)
-	
-	if !ok {
-		return errors.New("src is not string")
-	}
-
-	*t = Undefined
-	if v, ok := Types[value]; ok {
-		*t = v
-	}
-
-	return nil
-}
-
-func (t {{ .EnumName }}) Value() (driver.Value, error) {
-	return Tags[t], nil
-}
-
-func (t {{ .EnumName }}) String() string {
-	return Tags[t]
-}
-
-func (t {{ .EnumName }}) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.String())
-}
-
-func (t *{{ .EnumName }}) UnmarshalJSON(data []byte) error {
-	var (
-		s string
-		err error
-	)
-
-	if err = json.Unmarshal(data, &s); err != nil {
-		return err
-	}
-
-	if v, ok := Types[s]; ok {
-		*t = v
-
-		return nil
-	}
-
-	return fmt.Errorf("invalid status: %s", s)
-}
-`
-
-type EnumData struct {
-	Name      string
-	Value     int64
-	SnakeName string
-	Translate string
-}
 
 func main() {
 	fmt.Println("Enum codegen by GeekchanskiY")
 
-	targetLine, err := strconv.Atoi(os.Getenv("GOLINE"))
+	goFile := os.Getenv("GOFILE")
+	goPackage := os.Getenv("GOPACKAGE")
+
+	goLine, err := strconv.Atoi(os.Getenv("GOLINE"))
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "failed to parse GOLINE: %s\n", err)
 		os.Exit(1)
@@ -120,216 +28,37 @@ func main() {
 		os.Exit(1)
 	}
 
-	fullPath := filepath.Join(path, os.Getenv("GOFILE"))
+	fullPath := filepath.Join(path, goFile)
 
-	fset := token.NewFileSet()
-
-	data, err := parser.ParseFile(fset, fullPath, nil, parser.ParseComments)
+	eParser, err := parser.New(path, fullPath, goLine)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to parse file: %s\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to create enum parser: %s\n", err)
 		os.Exit(1)
 	}
 
-	var enumName string
-
-	ast.Inspect(data, func(n ast.Node) bool {
-		switch x := n.(type) {
-		case *ast.TypeSpec:
-			start := fset.Position(n.Pos())
-
-			// GOLINE is 1 line upper than n.Pos()
-			if start.Line == targetLine+1 {
-				fmt.Println("target found!", x.Name)
-				enumName = x.Name.Name
-
-				return false
-			}
-		}
-
-		return true
-	})
-
-	if enumName == "" {
-		_, _ = fmt.Fprintln(os.Stderr, "enum name not found")
-		os.Exit(1)
-	}
-
-	// type parser
-	conf := types.Config{}
-	info := &types.Info{
-		Defs: make(map[*ast.Ident]types.Object),
-	}
-	_, err = conf.Check(path, fset, []*ast.File{data}, info)
+	enumName, err := eParser.GetEnumName()
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to check: %s\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to get enum name: %s\n", err)
 		os.Exit(1)
 	}
 
-	neededDeclarations := make([]string, 0)
-
-	// search for declared names of the type
-	for ident, obj := range info.Defs {
-		if obj != nil {
-			// obj.Type().Underlying() - get base type
-			objPathSplit := strings.Split(obj.Type().String(), ".")
-
-			// base objects have different structure, filter them
-			// may try obj.Type().Underlying() == obj.Type(), like I'm smart
-			if len(objPathSplit) != 2 {
-				continue
-			}
-
-			if objPathSplit[1] == enumName {
-				neededDeclarations = append(neededDeclarations, ident.Name)
-			}
-
-		}
-	}
-
-	if len(neededDeclarations) == 0 {
-		_, _ = fmt.Fprintln(os.Stderr, "no enum declarations found")
-		os.Exit(1)
-	}
-
-	enums := make([]EnumData, 0, len(neededDeclarations))
-
-	ast.Inspect(data, func(n ast.Node) bool {
-		switch x := n.(type) {
-		case *ast.GenDecl:
-			for _, spec := range x.Specs {
-				if ts, ok := spec.(*ast.ValueSpec); ok {
-
-					// TODO: research problem below
-					// const EnumValue5, EnumValue6 Enum = 5, 6 will not be parsed for some reason
-					if len(ts.Names) != 1 {
-						continue
-					}
-
-					declaration := ts.Names[0].Obj
-					if declaration == nil {
-						continue
-					}
-
-					if slices.Contains(neededDeclarations, declaration.Name) {
-						enumValue, err := strconv.ParseInt(fmt.Sprint(declaration.Data), 10, 64)
-						if err != nil {
-							_, _ = fmt.Fprintf(os.Stderr, "failed to parse enum value: %s\n", err)
-							os.Exit(1)
-						}
-
-						comment := ""
-						if ts.Doc != nil && len(ts.Doc.List) > 0 {
-							comment = ts.Doc.List[0].Text
-						}
-
-						translation := ""
-						if translation = GetTranslationFromComment(comment); translation == "" {
-							translation = CamelToSnake(declaration.Name)
-						}
-
-						stringName := ""
-						if stringName = GetValueFromComment(comment); stringName == "" {
-							stringName = CamelToSnake(declaration.Name)
-						}
-
-						enums = append(enums, EnumData{
-							Name:      declaration.Name,
-							Value:     enumValue,
-							SnakeName: stringName,
-							Translate: translation,
-						})
-					}
-				}
-			}
-		}
-
-		return true
-	})
-
-	// force undefined value
-	undefinedExists := false
-	for _, v := range enums {
-		if v.Name == "Undefined" {
-			undefinedExists = true
-			break
-		}
-	}
-	if !undefinedExists {
-		_, _ = fmt.Fprintln(os.Stderr, "no undefined value found for enum")
-		os.Exit(1)
-	}
-
-	// template generation
-	tmpl, err := template.New("enum_code").Parse(Template)
+	data, err := eParser.Parse()
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to parse template: %s\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to parse enums: %s\n", err)
 		os.Exit(1)
 	}
 
-	newFileName := strings.Split(os.Getenv("GOFILE"), ".")[0] + "_" + enumName + "__gen.go"
-
-	dataPath := filepath.Join(path, newFileName)
-
-	file, err := os.Create(dataPath)
+	err = data.Validate()
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to create file: %s\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to validate enums: %s\n", err)
 		os.Exit(1)
 	}
 
-	defer func() {
-		if err := file.Close(); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "failed to close file: %s\n", err)
-			os.Exit(1)
-		}
-	}()
-
-	err = tmpl.Execute(file, map[string]any{
-		"PackageName": os.Getenv("GOPACKAGE"),
-		"Enums":       enums,
-		"EnumName":    enumName,
-	})
+	dataPath, err := generator.Generate(goFile, goPackage, path, enumName, data)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to execute template: %s\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to generate code: %s\n", err)
 		os.Exit(1)
 	}
 
 	fmt.Printf("generated code to %s\n", dataPath)
-}
-
-// CamelToSnake converts camelCase or PascalCase with numbers to snake_case
-func CamelToSnake(s string) string {
-	re1 := regexp.MustCompile("([a-z0-9])([A-Z])")
-	s = re1.ReplaceAllString(s, "${1}_${2}")
-
-	re2 := regexp.MustCompile("([a-zA-Z])([0-9])")
-	s = re2.ReplaceAllString(s, "${1}_${2}")
-
-	re3 := regexp.MustCompile("([0-9])([a-zA-Z])")
-	s = re3.ReplaceAllString(s, "${1}_${2}")
-
-	return strings.ToLower(s)
-}
-
-// GetTranslationFromComment - get enum's translation from comment
-func GetTranslationFromComment(comment string) string {
-	re := regexp.MustCompile(`Translate="([^"]+)"`)
-	match := re.FindStringSubmatch(comment)
-
-	if len(match) > 1 {
-		return match[1]
-	} else {
-		return ""
-	}
-}
-
-// GetValueFromComment - get enum's string value from comment
-func GetValueFromComment(comment string) string {
-	re := regexp.MustCompile(`Value="([^"]+)"`)
-	match := re.FindStringSubmatch(comment)
-
-	if len(match) > 1 {
-		return match[1]
-	} else {
-		return ""
-	}
 }

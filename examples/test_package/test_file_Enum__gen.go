@@ -9,6 +9,7 @@ import (
 	"fmt"
 )
 
+// Force interface implementation
 var (
 	_ sql.Scanner    = (*Enum)(nil)
 	_ driver.Valuer  = (*Enum)(nil)
