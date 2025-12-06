@@ -1,4 +1,4 @@
-package test_package
+package default_generation
 
 //go:generate enum_codegen
 type Enum int

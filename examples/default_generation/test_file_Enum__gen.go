@@ -1,5 +1,5 @@
 // Code generated via enum_codegen DO NOT EDIT.
-package test_package
+package default_generation
 
 import (
 	"database/sql"
