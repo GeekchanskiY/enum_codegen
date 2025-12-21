@@ -73,7 +73,7 @@ You can override default string value, and set translation value
     ```
 
 ## Generated code examples
-[Default usage](examples/default_generation/test_file_Enum__gen.go)
+[Default usage](examples/default_generation/file_Enum__gen.go)
 
 ## TODO's
 - add multi-language support

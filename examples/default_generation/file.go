@@ -1,6 +1,6 @@
 package default_generation
 
-//go:generate enum_codegen -f
+//go:generate enum_codegen
 type Enum int
 
 const (
