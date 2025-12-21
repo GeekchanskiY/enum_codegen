@@ -6,7 +6,7 @@ Pretty enum code generator.
  - [Overview](#overview)
  - [Requirements](#requirements)
  - [Quick Start](#quick-start)
- - [Generated Code Example](#generated-code-example)
+ - [Generated Code Examples](#generated-code-examples)
 
 ## Overview
 
@@ -72,11 +72,11 @@ You can override default string value, and set translation value
    go generate ./...
     ```
 
-## Generated code example
-May be found at [examples](examples/default_generation/test_file_Enum__gen.go)
+## Generated code examples
+[Default usage](examples/default_generation/test_file_Enum__gen.go)
 
 ## TODO's
-- add flag to disable force Undefined rule
 - add multi-language support
 - add output map naming customization (Tags, Values, Translations)
 - add unit tests
+- add different string value generators
