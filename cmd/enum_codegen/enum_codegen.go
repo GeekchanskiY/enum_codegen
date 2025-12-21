@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,7 +12,31 @@ import (
 )
 
 func main() {
-	fmt.Println("Enum codegen by GeekchanskiY")
+	//
+	// Flag parsing
+	//
+
+	flag.Usage = func() {
+		_, _ = fmt.Fprintf(os.Stdout, "Enum codegen by GeekchanskiY")
+		_, _ = fmt.Fprintf(os.Stdout, "Usage: %s [options]\n\n", os.Args[0])
+		_, _ = fmt.Fprintln(os.Stdout, "Options:")
+
+		flag.PrintDefaults()
+	}
+
+	help := flag.Bool("help", false, "show help")
+	flag.BoolVar(help, "h", false, "show help")
+
+	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	//
+	// ENV parsing
+	//
 
 	goFile := os.Getenv("GOFILE")
 	goPackage := os.Getenv("GOPACKAGE")
@@ -29,6 +54,10 @@ func main() {
 	}
 
 	fullPath := filepath.Join(path, goFile)
+
+	//
+	// Enum parsing and generation
+	//
 
 	eParser, err := parser.New(path, fullPath, goLine)
 	if err != nil {
