@@ -17,7 +17,7 @@ func main() {
 	//
 
 	flag.Usage = func() {
-		_, _ = fmt.Fprintf(os.Stdout, "Enum codegen by GeekchanskiY")
+		_, _ = fmt.Fprintf(os.Stdout, "Enum codegen by GeekchanskiY \n")
 		_, _ = fmt.Fprintf(os.Stdout, "Usage: %s [options]\n\n", os.Args[0])
 		_, _ = fmt.Fprintln(os.Stdout, "Options:")
 
@@ -26,6 +26,9 @@ func main() {
 
 	help := flag.Bool("help", false, "show help")
 	flag.BoolVar(help, "h", false, "show help")
+
+	forceUndefined := flag.Bool("force-undefined", false, "force undefined enums")
+	flag.BoolVar(forceUndefined, "f", false, "force undefined enums")
 
 	flag.Parse()
 
@@ -77,7 +80,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = data.Validate()
+	err = data.Validate(*forceUndefined)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "failed to validate enums: %s\n", err)
 		os.Exit(1)

@@ -12,7 +12,7 @@ var (
 	ErrValidationDuplicateValue = errors.New("duplicate value found")
 )
 
-func (e *Enum) Validate() error {
+func (e *Enum) Validate(forceUndefined bool) error {
 	if e == nil {
 		return ErrValidationNoValues
 	}
@@ -21,12 +21,14 @@ func (e *Enum) Validate() error {
 		return ErrValidationNoValues
 	}
 
-	if !e.checkUndefinedExists() {
-		return ErrValidationNoUndefined
-	}
-
 	if !e.checkNoDuplicates() {
 		return ErrValidationDuplicateValue
+	}
+
+	if forceUndefined {
+		if !e.checkUndefinedExists() {
+			return ErrValidationNoUndefined
+		}
 	}
 
 	return nil
@@ -47,13 +49,13 @@ func (e *Enum) checkNoDuplicates() bool {
 		for j, v2 := range *e {
 			if i != j {
 				if v1.Value == v2.Value {
-					return true
+					return false
 				}
 			}
 		}
 	}
 
-	return false
+	return true
 }
 
 func (e *Enum) checkNotEmpty() bool {
