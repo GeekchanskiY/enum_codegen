@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,7 +12,34 @@ import (
 )
 
 func main() {
-	fmt.Println("Enum codegen by GeekchanskiY")
+	//
+	// Flag parsing
+	//
+
+	flag.Usage = func() {
+		_, _ = fmt.Fprintf(os.Stdout, "Enum codegen by GeekchanskiY \n")
+		_, _ = fmt.Fprintf(os.Stdout, "Usage: %s [options]\n\n", os.Args[0])
+		_, _ = fmt.Fprintln(os.Stdout, "Options:")
+
+		flag.PrintDefaults()
+	}
+
+	help := flag.Bool("help", false, "show help")
+	flag.BoolVar(help, "h", false, "show help")
+
+	forceUndefined := flag.Bool("force-undefined", false, "force undefined enums")
+	flag.BoolVar(forceUndefined, "f", false, "force undefined enums")
+
+	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	//
+	// ENV parsing
+	//
 
 	goFile := os.Getenv("GOFILE")
 	goPackage := os.Getenv("GOPACKAGE")
@@ -29,6 +57,10 @@ func main() {
 	}
 
 	fullPath := filepath.Join(path, goFile)
+
+	//
+	// Enum parsing and generation
+	//
 
 	eParser, err := parser.New(path, fullPath, goLine)
 	if err != nil {
@@ -48,7 +80,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = data.Validate()
+	err = data.Validate(*forceUndefined)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "failed to validate enums: %s\n", err)
 		os.Exit(1)
