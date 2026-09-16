@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 )
 
@@ -17,7 +16,7 @@ var (
 	_ json.Marshaler = (*Enum)(nil)
 )
 
-var Tags = map[Enum]string{
+var EnumTags = map[Enum]string{
 	Undefined:  "Undefined",
 	EnumValue1: "Sample value",
 	EnumValue2: "enum_value_2",
@@ -26,7 +25,7 @@ var Tags = map[Enum]string{
 	EnumValue5: "enum_value_5",
 }
 
-var Types = map[string]Enum{
+var EnumTypes = map[string]Enum{
 	"Undefined":    Undefined,
 	"Sample value": EnumValue1,
 	"enum_value_2": EnumValue2,
@@ -35,7 +34,7 @@ var Types = map[string]Enum{
 	"enum_value_5": EnumValue5,
 }
 
-var Translations = map[Enum]string{
+var EnumTranslations = map[Enum]string{
 	Undefined:  "Enum Value is undefined",
 	EnumValue1: "enum_value_1",
 	EnumValue2: "enum_value_2",
@@ -45,26 +44,33 @@ var Translations = map[Enum]string{
 }
 
 func (t *Enum) Scan(src any) error {
-	value, ok := src.(string)
-
-	if !ok {
-		return errors.New("src is not string")
+	var value string
+	switch v := src.(type) {
+	case string:
+		value = v
+	case []byte:
+		value = string(v)
+	case nil:
+		*t = Undefined
+		return nil
+	default:
+		return fmt.Errorf("src is %T, not string or []byte", src)
 	}
 
-	*t = Undefined
-	if v, ok := Types[value]; ok {
+	if v, ok := EnumTypes[value]; ok {
 		*t = v
+		return nil
 	}
-
+	*t = Undefined
 	return nil
 }
 
 func (t Enum) Value() (driver.Value, error) {
-	return Tags[t], nil
+	return EnumTags[t], nil
 }
 
 func (t Enum) String() string {
-	return Tags[t]
+	return EnumTags[t]
 }
 
 func (t Enum) MarshalJSON() ([]byte, error) {
@@ -81,11 +87,11 @@ func (t *Enum) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if v, ok := Types[s]; ok {
+	if v, ok := EnumTypes[s]; ok {
 		*t = v
 
 		return nil
 	}
 
-	return fmt.Errorf("invalid status: %s", s)
+	return fmt.Errorf("invalid Enum: %s", s)
 }

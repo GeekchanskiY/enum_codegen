@@ -1,9 +1,7 @@
 package generator
 
 import (
-	"fmt"
 	"io"
-	"os"
 	"text/template"
 
 	"github.com/GeekchanskiY/enum_codegen/pkg/enum"
@@ -16,7 +14,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 )
 
@@ -28,45 +25,61 @@ var (
 	_ json.Marshaler = (*{{ .EnumName }})(nil)
 )
 
-var Tags = map[{{ .EnumName }}]string{
+var {{ .EnumName }}Tags = map[{{ .EnumName }}]string{
 	{{- range .Enums }} 
-		{{ .Name }}: "{{ .SnakeName }}",
+		{{ .Name }}: {{ printf "%q" .SnakeName }},
 	{{- end }}
 }
 
-var Types = map[string]{{ .EnumName }}{
+var {{ .EnumName }}Types = map[string]{{ .EnumName }}{
 	{{- range .Enums }} 
-		"{{ .SnakeName }}": {{ .Name }},
+		{{ printf "%q" .SnakeName }}: {{ .Name }},
 	{{- end }}
 }
 
-var Translations = map[{{ .EnumName }}]string{
+var {{ .EnumName }}Translations = map[{{ .EnumName }}]string{
 	{{- range .Enums }} 
-		{{ .Name }}: "{{ .Translate }}",
+		{{ .Name }}: {{ printf "%q" .Translate }},
 	{{- end }}
 }
 
 func (t *{{ .EnumName }}) Scan(src any) error {
-	value, ok := src.(string)
-	
-	if !ok {
-		return errors.New("src is not string")
+	var value string
+	switch v := src.(type) {
+	case string:
+		value = v
+	case []byte:
+		value = string(v)
+	case nil:
+		{{- if .HasUndefined }}
+		*t = Undefined
+		return nil
+		{{- else }}
+		return fmt.Errorf("src is nil")
+		{{- end }}
+	default:
+		return fmt.Errorf("src is %T, not string or []byte", src)
 	}
 
-	*t = Undefined
-	if v, ok := Types[value]; ok {
+	if v, ok := {{ .EnumName }}Types[value]; ok {
 		*t = v
+		return nil
 	}
 
+	{{- if .HasUndefined }}
+	*t = Undefined
 	return nil
+	{{- else }}
+	return fmt.Errorf("invalid {{ .EnumName }}: %s", value)
+	{{- end }}
 }
 
 func (t {{ .EnumName }}) Value() (driver.Value, error) {
-	return Tags[t], nil
+	return {{ .EnumName }}Tags[t], nil
 }
 
 func (t {{ .EnumName }}) String() string {
-	return Tags[t]
+	return {{ .EnumName }}Tags[t]
 }
 
 func (t {{ .EnumName }}) MarshalJSON() ([]byte, error) {
@@ -83,26 +96,30 @@ func (t *{{ .EnumName }}) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if v, ok := Types[s]; ok {
+	if v, ok := {{ .EnumName }}Types[s]; ok {
 		*t = v
 
 		return nil
 	}
 
-	return fmt.Errorf("invalid status: %s", s)
+	return fmt.Errorf("invalid {{ .EnumName }}: %s", s)
 }
 `
 
 func CompileTemplate(wr io.Writer, packageName, enumName string, data enum.Enum) error {
-	tmpl, err := template.New("enum_code").Parse(Template)
+	return compileTemplate(wr, Template, packageName, enumName, data)
+}
+
+func compileTemplate(wr io.Writer, templateText, packageName, enumName string, data enum.Enum) error {
+	tmpl, err := template.New("enum_code").Parse(templateText)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to parse template: %s\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	return tmpl.Execute(wr, map[string]any{
-		"PackageName": packageName,
-		"Enums":       data,
-		"EnumName":    enumName,
+		"PackageName":  packageName,
+		"Enums":        data,
+		"EnumName":     enumName,
+		"HasUndefined": data.HasUndefined(),
 	})
 }

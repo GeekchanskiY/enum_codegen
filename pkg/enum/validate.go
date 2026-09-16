@@ -34,14 +34,18 @@ func (e *Enum) Validate(forceUndefined bool) error {
 	return nil
 }
 
-func (e *Enum) checkUndefinedExists() bool {
-	for _, v := range *e {
-		if v.Name == undefined {
+func (e Enum) HasUndefined() bool {
+	for _, v := range e {
+		if v != nil && v.Name == undefined {
 			return true
 		}
 	}
 
 	return false
+}
+
+func (e *Enum) checkUndefinedExists() bool {
+	return (*e).HasUndefined()
 }
 
 func (e *Enum) checkNoDuplicates() bool {

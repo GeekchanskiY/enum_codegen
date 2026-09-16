@@ -1,7 +1,8 @@
 package generator
 
 import (
-	"fmt"
+	"bytes"
+	"go/format"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,24 +11,21 @@ import (
 )
 
 func Generate(goFile, goPackage, path, enumName string, data enum.Enum) (string, error) {
-	newFileName := strings.Split(goFile, ".")[0] + "_" + enumName + "__gen.go"
+	newFileName := strings.TrimSuffix(goFile, filepath.Ext(goFile)) + "_" + enumName + "__gen.go"
 
 	dataPath := filepath.Join(path, newFileName)
 
-	file, err := os.Create(dataPath)
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to create file: %s\n", err)
-		os.Exit(1)
+	var raw bytes.Buffer
+	if err := CompileTemplate(&raw, goPackage, enumName, data); err != nil {
+		return "", err
 	}
 
-	defer func() {
-		if err := file.Close(); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "failed to close file: %s\n", err)
-			os.Exit(1)
-		}
-	}()
+	formatted, err := format.Source(raw.Bytes())
+	if err != nil {
+		return "", err
+	}
 
-	if err = CompileTemplate(file, goPackage, enumName, data); err != nil {
+	if err = os.WriteFile(dataPath, formatted, 0o644); err != nil {
 		return "", err
 	}
 

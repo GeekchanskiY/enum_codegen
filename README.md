@@ -1,82 +1,174 @@
-# Enum_codegen
+# enum_codegen
 
-Pretty enum code generator.
+Generate polished Go enum helpers from plain `const` blocks.
 
-## Links
- - [Overview](#overview)
- - [Requirements](#requirements)
- - [Quick Start](#quick-start)
- - [Generated Code Examples](#generated-code-examples)
+`enum_codegen` turns integer-backed enums into a small, predictable API for string conversion, JSON, SQL, and display metadata. Keep your source enum readable, add one `//go:generate` directive, and let the generator write the repetitive code.
 
-## Overview
+## What It Generates
 
-Enum_codegen is a library for quick enum creation
+For an enum named `Status`, the generator creates:
 
-Generates `var Tags = map[Enum]string`, `var Types = map[string]Enum`, `var Translations = map[Enum]string`.
-Implements `sql.Scanner`, `driver.Valuer`, `fmt.Stringer`, `json.Marshaler` interfaces.
+- `StatusTags`: `map[Status]string` for enum-to-string lookup.
+- `StatusTypes`: `map[string]Status` for string-to-enum lookup.
+- `StatusTranslations`: `map[Status]string` for display text.
+- `String() string`.
+- `MarshalJSON() ([]byte, error)`.
+- `UnmarshalJSON([]byte) error`.
+- `Scan(any) error` for `database/sql`.
+- `Value() (driver.Value, error)` for database writes.
 
-Forces Enum to have default Undefined value.
-
-Generates snake_case string Enum value: `EnumValue1 -> enum_value_1`
-You can override default string value, and set translation value 
+The generated names are enum-scoped, so multiple enums can live in the same package without `Tags`, `Types`, or `Translations` collisions.
 
 ## Requirements
 
-- go 1.23.0 or later
+- Go `1.23.0` or newer.
+- Integer-backed enum types.
+- `go generate` for code generation.
+
+## Install
+
+```shell
+go install github.com/GeekchanskiY/enum_codegen/cmd/enum_codegen@latest
+```
+
+Make sure your Go binary directory is available in `PATH`:
+
+```shell
+export PATH="$(go env GOPATH)/bin:$PATH"
+```
 
 ## Quick Start
 
-1. Install enum_codegen:
+Create an enum and place `//go:generate enum_codegen` directly above the type declaration:
 
-   ```shell
-   go install github.com/GeekchanskiY/enum_codegen/cmd/enum_codegen
-   ```
-    
-    Before other steps make sure that go/bin is in your $PATH
-    
+```go
+package orders
 
-2. Create a Go file with an enum declaration:
+//go:generate enum_codegen
+type Status int
 
-   ```go
-    package main
+const (
+	// Undefined Value="undefined" Translate="Unknown status"
+	Undefined Status = iota
+	// StatusDraft Translate="Draft order"
+	StatusDraft
+	// StatusPaid Value="paid" Translate="Paid order"
+	StatusPaid
+	// StatusCancelled Translate="Cancelled order"
+	StatusCancelled
+)
+```
 
-    //go:generate enum_codegen
-    type Enum int
-    
-    const (
-    // Undefined Translate="Undefined value"
-    Undefined Enum = iota
-    // EnumValue1 Value="SuperbValue" Translate="Enum 1"
-    EnumValue1
-    // EnumValue2 Your documentation here if need Translate="Enum 2" Value="MegaValue"
-    EnumValue2
-    // EnumValue3 Translate="Enum 3"
-    EnumValue3
-    // Translate="Some value Enum 4"
-    EnumValue4
-    EnumValue5
-    )
-   ```
+Run generation for one file:
 
-3. Run go generate:
-    
-    you can specify the file to generate from explicitly
-    
-   ```shell
-   go generate package/file.go
-   ```
-   
-    or generate from every file in project. Result will not change
+```shell
+go generate ./status.go
+```
 
-    ```shell
-   go generate ./...
-    ```
+Or generate everything in the module:
 
-## Generated code examples
-[Default usage](examples/default_generation/file_Enum__gen.go)
+```shell
+go generate ./...
+```
 
-## TODO's
-- add multi-language support
-- add output map naming customization (Tags, Values, Translations)
-- add unit tests
-- add different string value generators
+The output file will be named like:
+
+```text
+status_Status__gen.go
+```
+
+## Comment Metadata
+
+By default, enum names are converted from PascalCase or camelCase to snake_case:
+
+```text
+StatusCancelled -> status_cancelled
+EnumValue1      -> enum_value_1
+```
+
+You can override the generated string value and display text with comment metadata:
+
+```go
+// StatusPaid Value="paid" Translate="Paid order"
+StatusPaid
+```
+
+Supported metadata:
+
+- `Value="..."`: custom string representation used by `String`, JSON, SQL, and lookup maps.
+- `Translate="..."`: display text stored in `<EnumName>Translations`.
+
+## Undefined Behavior
+
+If your enum contains a constant named exactly `Undefined`, generated SQL scanning uses it as a safe fallback for `nil` or unknown database values.
+
+```go
+const (
+	Undefined Status = iota
+	StatusDraft
+)
+```
+
+If there is no `Undefined` constant, unknown or `nil` scanned values return an error instead of generating code that fails to compile.
+
+To require an `Undefined` value during generation, use:
+
+```go
+//go:generate enum_codegen -f
+```
+
+or:
+
+```go
+//go:generate enum_codegen --force-undefined
+```
+
+## Generated API Example
+
+```go
+var status Status
+
+_ = status.Scan([]byte("paid"))
+fmt.Println(status == StatusPaid) // true
+
+data, _ := json.Marshal(StatusCancelled)
+fmt.Println(string(data)) // "status_cancelled"
+
+fmt.Println(StatusTranslations[StatusDraft]) // Draft order
+```
+
+## Examples
+
+- [Default generation](examples/default_generation/file.go)
+- [Generated output](examples/default_generation/file_Enum__gen.go)
+- [Forced undefined validation](examples/force_undefined/file.go)
+
+## Development
+
+Run the full test suite:
+
+```shell
+go test ./...
+```
+
+Run static checks:
+
+```shell
+go vet ./...
+```
+
+Run coverage for the implementation packages and checked-in generated example:
+
+```shell
+go test ./cmd/enum_codegen ./pkg/enum ./pkg/generator ./pkg/parser ./examples/default_generation -cover
+```
+
+## Roadmap
+
+- Multi-language translation support.
+- Configurable output map names.
+- Additional string value generation strategies.
+
+## License
+
+This project is available under the [MIT License](LICENSE).
